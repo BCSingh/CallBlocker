@@ -11,14 +11,14 @@ import Foundation
 import Contacts
 import CallKit
 
+let appDelegate = UIApplication.shared.delegate as! AppDelegate
+
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
-    @IBOutlet weak var blockBtn: UIButton!
     @IBOutlet weak var phoneTextFld: UITextField!
     @IBOutlet weak var tblView: UITableView!
     var refreshControl: UIRefreshControl!
-    var blockList: NSMutableArray!
-
+    var blockList: [String] = []
 
     // MARK: - System methods
     
@@ -34,9 +34,6 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         refreshControl.addTarget(self, action: #selector(refreshData(_:)), for: .valueChanged)
         self.tblView.refreshControl = refreshControl
         
-        //initialize blocklist array
-        self.blockList = NSMutableArray()
-        
         // show blocklist on screen
         self.loadContacts()
     }
@@ -50,12 +47,17 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     @IBAction func blockBtnAction(_ sender: Any) {
         
-        var tel: String = String();
-        tel = self.phoneTextFld.text!;
+        var tel: String = String()
+        tel = self.phoneTextFld.text!
         if tel.count == 0 {
             print("tel is nil")
             return
         }
+        if !tel.hasPrefix("+") {
+            print("Enter country dial code followed by phone number")
+            return
+        }
+        tel = tel.removeFormat()
         
         self.phoneTextFld.text = ""
         self.view.endEditing(true)
@@ -65,13 +67,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         }
         
         // add num to blocklist
-        let nsMutableArr = NSMutableArray(array: self.blockList)
-        nsMutableArr.add(tel as NSString)
-        self.blockList = nsMutableArr
+        self.blockList.append(tel)
         
         //sort blocklist in ascending order
-        let sortedArray = self.sortArray(arrayToSort: (nsMutableArr as NSArray) as! [String]) as NSArray
-        self.blockList = NSMutableArray(array: (sortedArray as? NSArray)!)
+        self.blockList.sort()
         
         //reload listview
         self.tblView.reloadData();
@@ -89,14 +88,9 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     func syncUD() {
         //save blocklist in userdefaults
-        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-        defaults?.removeObject(forKey: "blockList")
-        defaults?.set(self.blockList, forKey: "blockList")
-        print("syncronize : \(defaults?.synchronize())")
-        
+        appDelegate.updateBlockedContactsList(contacts: self.blockList)
         //reload extension to update blocklist entries
         CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
-        
     }
     
     func loadContacts() {
@@ -112,25 +106,20 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             if granted {
                 // if granted access, contacts would have been stored in user defaults
                 // so get the blocklist from user defaults
-                let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-                let blockedContacts = defaults?.value(forKey: "blockList")
-                if blockedContacts == nil {
-                    CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
-                    return
-                }
-                var nsMutableArr : NSMutableArray = NSMutableArray()
-                nsMutableArr = NSMutableArray(array: blockedContacts as! NSArray)
-                if nsMutableArr.count > 0 {
-                    // sort and display the blocklist
-                    let sortedArray = self.sortArray(arrayToSort: (nsMutableArr as NSArray) as! [String]) as NSArray
-                    self.blockList = NSMutableArray(array: (sortedArray as? NSArray)!)
-                    DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    let blockedContacts = appDelegate.getBlockedContacts()
+                    if blockedContacts.count == 0 {
+                        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
+                        return
+                    }
+                    if blockedContacts.count > 0 {
+                        // sort and display the blocklist
+                        self.blockList = blockedContacts.sorted()
                         self.tblView.reloadData()
                     }
                 }
             } else {
-                let appDel = AppDelegate()
-                appDel.promptUserForContactAccess()
+                appDelegate.promptUserForContactAccess()
             }
         })
         self.refreshControl.endRefreshing()
@@ -163,7 +152,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         cell.selectionStyle = .none // to prevent cells from being "highlighted"
         
         let num = self.blockList[(indexPath as NSIndexPath).row]
-        cell.textLabel!.text = num as! String;
+        cell.textLabel!.text = num
         print("row \(indexPath.row) and item \(self.blockList[indexPath.row])")
         return cell
     }
@@ -171,12 +160,9 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     public func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == UITableViewCell.EditingStyle.delete {
-            self.blockList.removeObject(at: indexPath.row)
+            self.blockList.remove(at: indexPath.row)
             self.tblView.deleteRows(at: [indexPath], with: UITableView.RowAnimation.automatic)
             self.syncUD()
         }
     }
-
-
 }
-

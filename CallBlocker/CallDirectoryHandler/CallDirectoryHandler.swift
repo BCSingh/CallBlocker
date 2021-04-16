@@ -41,16 +41,11 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
     private func addBlockingPhoneNumbers(to context: CXCallDirectoryExtensionContext) throws {
         // Retrieve phone numbers to block from data store. For optimal performance and memory usage when there are many phone numbers,
         // consider only loading a subset of numbers at a given time and using autorelease pool(s) to release objects allocated during each batch of numbers which are loaded.
-        //
         // Numbers must be provided in numerically ascending order.
         
-        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-        var phoneNumbers : NSMutableArray = NSMutableArray()
-        phoneNumbers = NSMutableArray(array: (defaults?.object(forKey: "blockList") as? NSArray)!)
-        
+        let phoneNumbers = self.getBlockedContacts()
         for phoneNumber in phoneNumbers {
-            let phStr = phoneNumber as! NSString
-            let phInt = Int64(phStr as String)
+            let phInt = Int64(phoneNumber as String)
             context.addBlockingEntry(withNextSequentialPhoneNumber: phInt!)
         }
     }
@@ -58,81 +53,62 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
     private func addIdentificationPhoneNumbers(to context: CXCallDirectoryExtensionContext) throws {
         // Retrieve phone numbers to identify and their identification labels from data store. For optimal performance and memory usage when there are many phone numbers,
         // consider only loading a subset of numbers at a given time and using autorelease pool(s) to release objects allocated during each batch of numbers which are loaded.
-        //
         // Numbers must be provided in numerically ascending order.
-        
-        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-        var phoneNumbers : NSMutableArray = NSMutableArray()
-        phoneNumbers = NSMutableArray(array: (defaults?.object(forKey: "blockList") as? NSArray)!)
-        
+
+        let phoneNumbers = self.getBlockedContacts()
         for phoneNumber in phoneNumbers {
-            let phStr = phoneNumber as! NSString
-            let phInt = Int64(phStr as String)
+            let phInt = Int64(phoneNumber as String)
             context.addIdentificationEntry(withNextSequentialPhoneNumber: phInt!, label: "BCS TEST")
         }
     }
     
     func loadContacts() {
         
-        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-        let blockedContacts = defaults?.value(forKey: "blockList")
-        if blockedContacts != nil {
+        let blockedContacts = self.getBlockedContacts()
+        if blockedContacts.count > 0 {
             return
         }
         
         let contactStore = CNContactStore()
-        //        let keysToFetch = [CNContactPhoneNumbersKey]
         contactStore.requestAccess(for: .contacts, completionHandler: { (granted, error) -> Void in
             if granted {
                 let predicate = CNContact.predicateForContactsInContainer(withIdentifier: contactStore.defaultContainerIdentifier())
                 var contacts: [CNContact]! = []
                 do {
                     contacts = try contactStore.unifiedContacts(matching: predicate, keysToFetch: [CNContactPhoneNumbersKey as CNKeyDescriptor])
-                    
                     if contacts.count == 0 {
                         return
                     }
                     
-                    var finalArrayForContacts = NSMutableArray()
-                    
+                    var finalArrayForContacts: [String] = []
                     for contactTemp in contacts {
                         let contactNew = contactTemp
-                        var tempArray : NSMutableArray = NSMutableArray()
+                        var tempArray: [String] = []
                         if (contactNew.phoneNumbers).count > 0 {
-                            
-                            var numArray : NSArray = NSArray()
-                            numArray = contactNew.phoneNumbers as NSArray
+                            var numArray: [CNLabeledValue<CNPhoneNumber>] = []
+                            numArray = contactNew.phoneNumbers
                             for cnLblValue in numArray {
-                                var cnPhNum : CNPhoneNumber = CNPhoneNumber()
-                                cnPhNum = (cnLblValue as AnyObject).value(forKey: "value") as! CNPhoneNumber
-                                var tempStr : NSString = NSString()
-                                tempStr = cnPhNum.value(forKey: "digits") as! NSString
-                                tempStr = self.removeFormat(fromMobileNumber: tempStr as String) as NSString
-                                tempArray.add(tempStr);
+                                let cnPhNum = cnLblValue.value
+                                let tempStr = self.removeFormat(fromMobileNumber: cnPhNum.stringValue)
+                                tempArray.append(tempStr);
                             }
                             
-                            for i in 0  ..< tempArray.count
-                            {
-                                let phoneNumber : String = (tempArray.object(at: i)) as! String
+                            for i in 0  ..< tempArray.count {
+                                let phoneNumber : String = tempArray[i]
                                 if phoneNumber.count > 0 {
                                     let resultString : String = (phoneNumber.components(separatedBy: NSCharacterSet.whitespaces) as NSArray).componentsJoined(by: "")
-                                    finalArrayForContacts.add(resultString)
+                                    finalArrayForContacts.append(resultString)
                                 }
                             }
-                        }else{
-                            // no number saved
                         }
                     }
                     
-                    //finalArrayForContacts.sort(using: [NSSortDescriptor.init(key: "self", ascending: true)])
-                    let sortedArray = self.sortArray(arrayToSort: (finalArrayForContacts as NSArray) as! [String]) as NSArray
-                    finalArrayForContacts = NSMutableArray(array: (sortedArray as? NSArray)!)
-                    
-                    let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
-                    defaults?.set(finalArrayForContacts, forKey: "blockList")
-                    
+                    finalArrayForContacts.sort()
+                    DispatchQueue.main.async {
+                        self.updateBlockedContactsList(contacts: finalArrayForContacts)
+                    }
                 }catch {
-                    
+                    print(error)
                 }
             }
         })
@@ -159,6 +135,20 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
         mobileNumber = mobileNumber.replacingOccurrences(of: "\u{00a0}", with: "")
         return mobileNumber
     }
+    
+    func updateBlockedContactsList(contacts: [String]) {
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
+        defaults?.removeObject(forKey: "blockList")
+        defaults?.set(contacts, forKey: "blockList")
+        defaults?.synchronize()
+    }
+    
+    func getBlockedContacts() -> [String] {
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
+        let blockedContacts = defaults?.value(forKey: "blockList")
+        return blockedContacts as! [String]
+    }
+    
 }
 
 extension CallDirectoryHandler: CXCallDirectoryExtensionContextDelegate {
@@ -170,6 +160,7 @@ extension CallDirectoryHandler: CXCallDirectoryExtensionContextDelegate {
         // This may be used to store the error details in a location accessible by the extension's containing app, so that the
         // app may be notified about errors which occured while loading data even if the request to load data was initiated by
         // the user in Settings instead of via the app itself.
+        print(error)
     }
 
 }
