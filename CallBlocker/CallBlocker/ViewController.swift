@@ -52,7 +52,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         
         var tel: String = String();
         tel = self.phoneTextFld.text!;
-        if tel.characters.count == 0 {
+        if tel.count == 0 {
             print("tel is nil")
             return
         }
@@ -83,19 +83,19 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     // MARK: - User defined methods
     
-    func refreshData(_ sender: Any) {
+    @objc func refreshData(_ sender: Any) {
         self.loadContacts()
     }
     
     func syncUD() {
         //save blocklist in userdefaults
-        let defaults = UserDefaults(suiteName: "group.Feasibility")
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
         defaults?.removeObject(forKey: "blockList")
         defaults?.set(self.blockList, forKey: "blockList")
         print("syncronize : \(defaults?.synchronize())")
         
         //reload extension to update blocklist entries
-        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.BCS.callBlocker.CallDirectoryHandler", completionHandler: nil)
+        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
         
     }
     
@@ -112,10 +112,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             if granted {
                 // if granted access, contacts would have been stored in user defaults
                 // so get the blocklist from user defaults
-                let defaults = UserDefaults(suiteName: "group.Feasibility")
+                let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
                 let blockedContacts = defaults?.value(forKey: "blockList")
                 if blockedContacts == nil {
-                    CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.BCS.callBlocker.CallDirectoryHandler", completionHandler: nil)
+                    CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
                     return
                 }
                 var nsMutableArr : NSMutableArray = NSMutableArray()
@@ -136,7 +136,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         self.refreshControl.endRefreshing()
         
         //reload extension to update blocklist entries
-        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.BCS.callBlocker.CallDirectoryHandler", completionHandler: nil)
+        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.bcs.incomingBlocker.CallDirectoryHandler", completionHandler: nil)
     }
     
     /* Function to sort the blocklist array by numerically ascending */
@@ -169,10 +169,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
     
     
-    public func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == UITableViewCellEditingStyle.delete {
+    public func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == UITableViewCell.EditingStyle.delete {
             self.blockList.removeObject(at: indexPath.row)
-            self.tblView.deleteRows(at: [indexPath], with: UITableViewRowAnimation.automatic)
+            self.tblView.deleteRows(at: [indexPath], with: UITableView.RowAnimation.automatic)
             self.syncUD()
         }
     }

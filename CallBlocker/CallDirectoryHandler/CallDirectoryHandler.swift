@@ -44,7 +44,7 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
         //
         // Numbers must be provided in numerically ascending order.
         
-        let defaults = UserDefaults(suiteName: "group.Feasibility")
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
         var phoneNumbers : NSMutableArray = NSMutableArray()
         phoneNumbers = NSMutableArray(array: (defaults?.object(forKey: "blockList") as? NSArray)!)
         
@@ -61,7 +61,7 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
         //
         // Numbers must be provided in numerically ascending order.
         
-        let defaults = UserDefaults(suiteName: "group.Feasibility")
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
         var phoneNumbers : NSMutableArray = NSMutableArray()
         phoneNumbers = NSMutableArray(array: (defaults?.object(forKey: "blockList") as? NSArray)!)
         
@@ -74,7 +74,7 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
     
     func loadContacts() {
         
-        let defaults = UserDefaults(suiteName: "group.Feasibility")
+        let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
         let blockedContacts = defaults?.value(forKey: "blockList")
         if blockedContacts != nil {
             return
@@ -114,7 +114,7 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
                             for i in 0  ..< tempArray.count
                             {
                                 let phoneNumber : String = (tempArray.object(at: i)) as! String
-                                if phoneNumber.characters.count > 0 {
+                                if phoneNumber.count > 0 {
                                     let resultString : String = (phoneNumber.components(separatedBy: NSCharacterSet.whitespaces) as NSArray).componentsJoined(by: "")
                                     finalArrayForContacts.add(resultString)
                                 }
@@ -128,7 +128,7 @@ class CallDirectoryHandler: CXCallDirectoryProvider {
                     let sortedArray = self.sortArray(arrayToSort: (finalArrayForContacts as NSArray) as! [String]) as NSArray
                     finalArrayForContacts = NSMutableArray(array: (sortedArray as? NSArray)!)
                     
-                    let defaults = UserDefaults(suiteName: "group.Feasibility")
+                    let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
                     defaults?.set(finalArrayForContacts, forKey: "blockList")
                     
                 }catch {

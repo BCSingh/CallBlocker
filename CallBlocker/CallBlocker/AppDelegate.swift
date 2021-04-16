@@ -15,11 +15,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+    func applicationDidFinishLaunching(_ application: UIApplication) {
         self.loadContacts()
-
-        return true
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -72,17 +69,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                     
                     for contactTemp in contacts {
                         let contactNew = contactTemp
-                        var tempArray : NSMutableArray = NSMutableArray()
+                        let tempArray : NSMutableArray = NSMutableArray()
                         if (contactNew.phoneNumbers).count > 0 {
                             
                             var numArray : NSArray = NSArray()
                             numArray = contactNew.phoneNumbers as NSArray
                             for cnLblValue in numArray {
-                                var cnPhNum : CNPhoneNumber = CNPhoneNumber()
-                                cnPhNum = (cnLblValue as AnyObject).value(forKey: "value") as! CNPhoneNumber
-                                var tempStr : NSString = NSString()
-                                tempStr = cnPhNum.value(forKey: "digits") as! NSString
-                                tempStr = self.removeFormat(fromMobileNumber: tempStr as String) as NSString
+                                let cnLabelValue = cnLblValue as! CNLabeledValue<CNPhoneNumber>
+                                let cnPhNum = cnLabelValue.value
+//                                let phNum : CNPhoneNumber = CNPhoneNumber(stringValue: cnPhNum.stringValue)
+//                                var cnPhNum : CNPhoneNumber = CNPhoneNumber()
+//                                cnPhNum = (cnLblValue as AnyObject).value(forKey: "value") as! CNPhoneNumber
+//                                var tempStr : NSString = NSString()
+//                                tempStr = cnPhNum.value(forKey: "digits") as! NSString
+                                let tempStr = self.removeFormat(fromMobileNumber: cnPhNum.stringValue) as NSString
                                 tempArray.add(tempStr);
                             }
                             
@@ -90,7 +90,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                             {
                                 let phoneNumber : String = (tempArray.object(at: i)) as! String
                                 
-                                if phoneNumber.characters.count > 0 {
+                                if phoneNumber.count > 0 {
                                     
                                     let resultString : String = (phoneNumber.components(separatedBy: NSCharacterSet.whitespaces) as NSArray).componentsJoined(by: "")
                                     
@@ -103,7 +103,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                     
                     finalArrayForContacts.sort(using: [NSSortDescriptor.init(key: "self", ascending: true)])
                     
-                    let defaults = UserDefaults(suiteName: "group.Feasibility")
+                    let defaults = UserDefaults(suiteName: "group.com.incomingBlocker")
                     defaults?.set(finalArrayForContacts, forKey: "blockList")
                     defaults?.synchronize()
                     
@@ -132,14 +132,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         let alert = UIAlertController(title: "Access to contacts.",
                                       message: "This app requires access to contacts",
-                                      preferredStyle: UIAlertControllerStyle.alert)
+                                      preferredStyle: UIAlertController.Style.alert)
         
         let cancelAction = UIAlertAction(title: "Cancel",
                                          style: .cancel, handler: nil)
         alert.addAction(cancelAction)
         
         let settingsAction = UIAlertAction(title: "Go to Settings", style: .default) { (UIAlertAction) in
-            UIApplication.shared.open(NSURL.init(string: UIApplicationOpenSettingsURLString) as! URL, options: [:], completionHandler: nil)
+            UIApplication.shared.open(NSURL.init(string: UIApplication.openSettingsURLString)! as URL, options: [:], completionHandler: nil)
         }
         alert.addAction(settingsAction)
         
