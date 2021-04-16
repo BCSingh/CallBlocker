@@ -2,14 +2,14 @@
 An iOS call blocker sample app in Swift using CallKit
 
 Helpful when you want to block all calls from all known contacts at a time without going for Airplane mode. You can whitelist selected numbers too.
+On the other hand, this code can be modified and used as a call blocker app to block only the specific numbers that you add to block
 
-Language: Swift 3
+Language: Swift 5
 
-Support from iOS 10
+Supports from iOS 12.0
 
 - Maintains a local blocklist in app. 
-- All your phone contacts will be added to this blocklist
-- Pull down to refresh will check and add any new contacts from your Phone Contacts to this blocklist.
-- Swipe right to left for deleting the number from blocklist (whitelisting the contact)
-- Multi select and delete contacts from blocklist
-- Text entry any phone number with local code to block it
+- The sample adds all your phone contacts to this blocklist
+- Pull down to refresh will check for any new contacts from your Phone Contacts and add to this blocklist.
+- Swipe left on numbers to delete them from blocklist (whitelisting the contact)
+- Enter phone number with dial code to block it (example: +919876543210 or +19876543210)
